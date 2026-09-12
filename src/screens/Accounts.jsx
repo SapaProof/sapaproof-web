@@ -102,7 +102,12 @@ export default function Accounts() {
             <div className="account-bar" style={{ background: "var(--accent-green)" }} />
             <div className="account-text">
               <div className="account-name">{a.institutionName}</div>
-              <div className="account-sub">Linked {new Date(a.linkedAt).toLocaleDateString()}</div>
+              <div className="account-sub">
+                {a.accountType && a.accountType !== "unknown"
+                  ? `${a.accountType.replace(/_/g, " ").toLowerCase()} · `
+                  : ""}
+                Linked {new Date(a.linkedAt).toLocaleDateString()}
+              </div>
             </div>
             <button
               className="icon-btn"
