@@ -48,6 +48,7 @@ export const api = {
   removeManualAccount: (id) =>
     request(`/api/finance/manual-accounts/${id}`, { method: "DELETE" }),
   getBudgetSummary: (accountId) => request(`/api/finance/budget-summary/${accountId}`),
+  getNetWorthHistory: () => request(`/api/finance/networth-history/demo`),
   seedDemo: () => request(`/api/finance/demo/seed`, { method: "POST" }),
   exchangeToken: (code) =>
     request(`/api/mono/exchange-token`, {

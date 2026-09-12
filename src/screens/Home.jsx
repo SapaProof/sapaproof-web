@@ -1,10 +1,16 @@
 import React, { useEffect, useState } from "react";
-import { ArrowUpRight, ArrowDownRight } from "lucide-react";
+import { AreaChart, Area, ResponsiveContainer, YAxis } from "recharts";
 import { api } from "../api.js";
 import ConnectBankButton from "../ConnectBankButton.jsx";
 
 function naira(n) {
   return `₦${Math.round(n).toLocaleString("en-NG")}`;
+}
+function nairaCompact(n) {
+  const abs = Math.abs(n);
+  if (abs >= 1000000) return `₦${(n / 1000000).toFixed(1)}M`;
+  if (abs >= 1000) return `₦${(n / 1000).toFixed(0)}K`;
+  return naira(n);
 }
 
 const CATEGORY_COLOR = {
@@ -14,8 +20,36 @@ const CATEGORY_COLOR = {
   other: "var(--text-secondary)",
 };
 
+function NetWorthSparkline({ history }) {
+  if (!history || history.length < 2) return null;
+  return (
+    <div style={{ width: "100%", height: 72, marginTop: 4 }}>
+      <ResponsiveContainer>
+        <AreaChart data={history} margin={{ top: 4, right: 0, bottom: 0, left: 0 }}>
+          <defs>
+            <linearGradient id="nwFill" x1="0" y1="0" x2="0" y2="1">
+              <stop offset="0%" stopColor="var(--accent-green)" stopOpacity={0.25} />
+              <stop offset="100%" stopColor="var(--accent-green)" stopOpacity={0} />
+            </linearGradient>
+          </defs>
+          <YAxis hide domain={["dataMin - 100000", "dataMax + 100000"]} />
+          <Area
+            type="monotone"
+            dataKey="totalNgn"
+            stroke="var(--accent-green)"
+            strokeWidth={2.5}
+            fill="url(#nwFill)"
+          />
+        </AreaChart>
+      </ResponsiveContainer>
+    </div>
+  );
+}
+
 export default function Home() {
   const [data, setData] = useState(null);
+  const [history, setHistory] = useState(null);
+  const [cashFlow, setCashFlow] = useState(null);
   const [rateMode, setRateMode] = useState("parallel");
   const [status, setStatus] = useState("loading"); // loading | ready | error
   const [seeding, setSeeding] = useState(false);
@@ -26,6 +60,15 @@ export default function Home() {
       const result = await api.getNetWorth(mode);
       setData(result);
       setStatus("ready");
+
+      // Both of these are best-effort extras — a missing history or
+      // cash-flow figure shouldn't block the core net worth view from
+      // showing, so failures here are swallowed rather than surfaced.
+      api.getNetWorthHistory().then((h) => setHistory(h.history)).catch(() => setHistory(null));
+
+      const linked = await api.getLinkedAccounts().catch(() => ({ accounts: [] }));
+      const accountId = linked.accounts[0] ? linked.accounts[0].monoAccountId : "demo";
+      api.getBudgetSummary(accountId).then(setCashFlow).catch(() => setCashFlow(null));
     } catch (err) {
       console.error(err);
       setStatus("error");
@@ -42,7 +85,7 @@ export default function Home() {
     return (
       <div className="screen">
         <div className="empty-state">
-          <p>Couldn't reach the backend. Is mono-backend running on the URL in your .env?</p>
+          <p>Couldn't reach the backend. Is sapaproof-backend running on the URL in your .env?</p>
         </div>
       </div>
     );
@@ -75,6 +118,7 @@ export default function Home() {
         <div className="hero-label">
           1 USD ≈ {naira(data.rateUsed.usdToNgn)} ({data.rateUsed.mode})
         </div>
+        <NetWorthSparkline history={history} />
       </div>
 
       {!hasAccounts && (
@@ -98,6 +142,48 @@ export default function Home() {
             {seeding ? "Loading demo data…" : "Load demo data"}
           </button>
         </div>
+      )}
+
+      {hasAccounts && cashFlow && (
+        <>
+          <div className="section-title">Cash flow this month</div>
+          <div className="hero-panel small" style={{ marginBottom: 22 }}>
+            <div className="budget-row" style={{ marginBottom: 14 }}>
+              <div className="budget-top">
+                <span className="budget-name">Income</span>
+                <span className="budget-amounts" style={{ color: "var(--accent-green)" }}>
+                  {nairaCompact(cashFlow.totalIncome || 0)}
+                </span>
+              </div>
+              <div className="flow-track">
+                <div
+                  className="flow-fill"
+                  style={{ width: "100%", background: "var(--accent-green)" }}
+                />
+              </div>
+            </div>
+            <div className="budget-row" style={{ marginBottom: 0 }}>
+              <div className="budget-top">
+                <span className="budget-name">Spent</span>
+                <span className="budget-amounts">{nairaCompact(cashFlow.totalSpent || 0)}</span>
+              </div>
+              <div className="flow-track">
+                <div
+                  className="flow-fill"
+                  style={{
+                    width: `${Math.min(
+                      100,
+                      Math.round(
+                        ((cashFlow.totalSpent || 0) / (cashFlow.totalIncome || 1)) * 100
+                      )
+                    )}%`,
+                    background: "var(--accent-gold)",
+                  }}
+                />
+              </div>
+            </div>
+          </div>
+        </>
       )}
 
       {hasAccounts && (
