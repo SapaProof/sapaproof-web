@@ -1,53 +1,84 @@
 import React, { useEffect, useState } from "react";
-import { Home as HomeIcon, Wallet, PieChart, Sun, Moon } from "lucide-react";
-import Home from "./screens/Home.jsx";
-import Accounts from "./screens/Accounts.jsx";
-import Budget from "./screens/Budget.jsx";
+import {
+  LayoutGrid, Receipt, PieChart, TrendingUp, Wallet, LineChart, Target,
+  Sun, Moon, RefreshCw,
+} from "lucide-react";
+import AccountsSidebar from "./AccountsSidebar.jsx";
+import Dashboard from "./screens/Dashboard.jsx";
+import Transactions from "./screens/Transactions.jsx";
+import Spending from "./screens/Spending.jsx";
+import NetWorth from "./screens/NetWorth.jsx";
+import SpendingPlan from "./screens/SpendingPlan.jsx";
+import Investments from "./screens/Investments.jsx";
+import SavingsGoals from "./screens/SavingsGoals.jsx";
 
-const TABS = [
-  { id: "home", label: "Home", icon: HomeIcon, Screen: Home },
-  { id: "accounts", label: "Accounts", icon: Wallet, Screen: Accounts },
-  { id: "budget", label: "Budget", icon: PieChart, Screen: Budget },
+const NAV = [
+  { id: "dashboard", label: "Dashboard", icon: LayoutGrid, Screen: Dashboard },
+  { id: "transactions", label: "Transactions", icon: Receipt, Screen: Transactions },
+  { id: "spending", label: "Spending", icon: PieChart, Screen: Spending },
+  { id: "networth", label: "Net Worth", icon: TrendingUp, Screen: NetWorth },
+  { id: "plan", label: "Spending Plan", icon: Wallet, Screen: SpendingPlan },
+  { id: "investments", label: "Investments", icon: LineChart, Screen: Investments },
+  { id: "goals", label: "Savings Goals", icon: Target, Screen: SavingsGoals },
 ];
 
 export default function App() {
-  const [tab, setTab] = useState("home");
-  const [theme, setTheme] = useState(
-    () => localStorage.getItem("sapaproof_theme") || "light"
-  );
-  const ActiveScreen = TABS.find((t) => t.id === tab).Screen;
+  const [view, setView] = useState("dashboard");
+  const [refreshSignal, setRefreshSignal] = useState(0);
+  const [theme, setTheme] = useState(() => localStorage.getItem("sapaproof_theme") || "light");
 
   useEffect(() => {
     localStorage.setItem("sapaproof_theme", theme);
   }, [theme]);
 
+  const Active = NAV.find((n) => n.id === view).Screen;
+
   return (
     <div className={`app-shell theme-${theme}`}>
-      <header className="top-bar">
-        <span className="brand">SapaProof</span>
-        <nav className="top-nav">
-          {TABS.map((t) => (
+      <div className="app-body">
+        <nav className="icon-rail">
+          <div className="rail-brand">Q</div>
+          {NAV.map((n) => (
             <button
-              key={t.id}
-              className={`nav-btn ${tab === t.id ? "active" : ""}`}
-              onClick={() => setTab(t.id)}
+              key={n.id}
+              className={`rail-btn ${view === n.id ? "active" : ""}`}
+              onClick={() => setView(n.id)}
+              aria-label={n.label}
+              title={n.label}
             >
-              <t.icon size={16} />
-              {t.label}
+              <n.icon size={19} />
             </button>
           ))}
+          <div className="rail-spacer" />
           <button
-            className="theme-toggle"
-            aria-label="Toggle light/dark theme"
+            className="rail-btn"
             onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
+            aria-label="Toggle theme"
+            title="Toggle light/dark"
           >
-            {theme === "light" ? <Moon size={16} /> : <Sun size={16} />}
+            {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+          </button>
+          <button
+            className="rail-btn"
+            onClick={() => setRefreshSignal((s) => s + 1)}
+            aria-label="Refresh"
+            title="Refresh"
+          >
+            <RefreshCw size={18} />
           </button>
         </nav>
-      </header>
-      <main className="content">
-        <ActiveScreen />
-      </main>
+
+        <AccountsSidebar refreshKey={refreshSignal} onChanged={() => setRefreshSignal((s) => s + 1)} />
+
+        <main className="main-content">
+          <div className="content-header">
+            <span className="brand-title">SapaProof</span>
+          </div>
+          <div className="content-scroll">
+            <Active refreshSignal={refreshSignal} />
+          </div>
+        </main>
+      </div>
     </div>
   );
 }

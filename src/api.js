@@ -48,8 +48,13 @@ export const api = {
   removeManualAccount: (id) =>
     request(`/api/finance/manual-accounts/${id}`, { method: "DELETE" }),
   getBudgetSummary: (accountId) => request(`/api/finance/budget-summary/${accountId}`),
-  getNetWorthHistory: () => request(`/api/finance/networth-history/demo`),
+  getNetWorthHistory: (range = "6M") => request(`/api/finance/networth-history/demo?range=${range}`),
+  getCashflowHistory: () => request(`/api/finance/cashflow-history/demo`),
   seedDemo: () => request(`/api/finance/demo/seed`, { method: "POST" }),
+  getGoals: () => request(`/api/finance/goals`),
+  addGoal: (payload) => request(`/api/finance/goals`, { method: "POST", body: JSON.stringify(payload) }),
+  updateGoal: (id, saved) => request(`/api/finance/goals/${id}`, { method: "PATCH", body: JSON.stringify({ saved }) }),
+  removeGoal: (id) => request(`/api/finance/goals/${id}`, { method: "DELETE" }),
   exchangeToken: (code) =>
     request(`/api/mono/exchange-token`, {
       method: "POST",
