@@ -1,5 +1,6 @@
 import React, { useEffect, useState } from "react";
 import { AreaChart, Area, ResponsiveContainer, YAxis } from "recharts";
+import { TrendingUp, Wallet, PieChart as PieIcon, Landmark } from "lucide-react";
 import { api } from "../api.js";
 import ConnectBankButton from "../ConnectBankButton.jsx";
 
@@ -19,6 +20,21 @@ const CATEGORY_COLOR = {
   savings: "var(--coral)",
   other: "var(--text-secondary)",
 };
+
+/** Shared shell every Home snapshot widget uses, so each reads as its own
+ * distinct card — like Simplifi's Net Worth / Spending Plan / Watchlist
+ * tiles — rather than one continuous scroll of sections. */
+function SnapshotCard({ icon: Icon, title, children }) {
+  return (
+    <div className="snapshot-card">
+      <div className="snapshot-header">
+        <Icon size={16} />
+        <span>{title}</span>
+      </div>
+      {children}
+    </div>
+  );
+}
 
 function NetWorthSparkline({ history }) {
   if (!history || history.length < 2) return null;
@@ -61,14 +77,16 @@ export default function Home() {
       setData(result);
       setStatus("ready");
 
-      // Both of these are best-effort extras — a missing history or
-      // cash-flow figure shouldn't block the core net worth view from
-      // showing, so failures here are swallowed rather than surfaced.
+      // Best-effort extras — a missing history or cash-flow figure
+      // shouldn't block the core net worth card from showing.
       api.getNetWorthHistory().then((h) => setHistory(h.history)).catch(() => setHistory(null));
 
       const linked = await api.getLinkedAccounts().catch(() => ({ accounts: [] }));
       const accountId = linked.accounts[0] ? linked.accounts[0].monoAccountId : "demo";
-      api.getBudgetSummary(accountId).then(setCashFlow).catch(() => setCashFlow(null));
+      api.getBudgetSummary(accountId).then(setCashFlow).catch((err) => {
+        console.error("cash flow snapshot failed to load:", err);
+        setCashFlow(null);
+      });
     } catch (err) {
       console.error(err);
       setStatus("error");
@@ -92,11 +110,14 @@ export default function Home() {
   }
 
   const hasAccounts = data.accounts.length > 0;
+  const topCategories = cashFlow
+    ? Object.entries(cashFlow.byCategory).sort((a, b) => b[1] - a[1]).slice(0, 3)
+    : [];
 
   return (
     <div className="screen">
       <div className="eyebrow-row">
-        <span className="hello">Net worth</span>
+        <span className="hello">Overview</span>
         <select
           className="rate-select"
           value={rateMode}
@@ -107,19 +128,17 @@ export default function Home() {
         </select>
       </div>
 
-      <div className="hero-panel">
+      {/* Snapshot 1: Net Worth */}
+      <SnapshotCard icon={TrendingUp} title="Net Worth">
+        <div className="hero-figure">{naira(data.totalNgn)}</div>
         <div className="hero-label">
-          Total across all accounts
+          1 USD ≈ {naira(data.rateUsed.usdToNgn)} ({data.rateUsed.mode})
           {data.rateUsed.isEstimate && rateMode === "parallel" && (
             <span className="estimate-tag"> · estimated</span>
           )}
         </div>
-        <div className="hero-figure">{naira(data.totalNgn)}</div>
-        <div className="hero-label">
-          1 USD ≈ {naira(data.rateUsed.usdToNgn)} ({data.rateUsed.mode})
-        </div>
         <NetWorthSparkline history={history} />
-      </div>
+      </SnapshotCard>
 
       {!hasAccounts && (
         <div className="empty-state">
@@ -144,51 +163,67 @@ export default function Home() {
         </div>
       )}
 
+      {/* Snapshot 2: Spending Plan */}
       {hasAccounts && cashFlow && (
-        <>
-          <div className="section-title">Cash flow this month</div>
-          <div className="hero-panel small" style={{ marginBottom: 22 }}>
-            <div className="budget-row" style={{ marginBottom: 14 }}>
-              <div className="budget-top">
-                <span className="budget-name">Income</span>
-                <span className="budget-amounts" style={{ color: "var(--accent-green)" }}>
-                  {nairaCompact(cashFlow.totalIncome || 0)}
-                </span>
-              </div>
-              <div className="flow-track">
-                <div
-                  className="flow-fill"
-                  style={{ width: "100%", background: "var(--accent-green)" }}
-                />
-              </div>
+        <SnapshotCard icon={Wallet} title="Spending Plan">
+          <div className="budget-row" style={{ marginBottom: 14 }}>
+            <div className="budget-top">
+              <span className="budget-name">Income</span>
+              <span className="budget-amounts" style={{ color: "var(--accent-green)" }}>
+                {nairaCompact(cashFlow.totalIncome || 0)}
+              </span>
             </div>
-            <div className="budget-row" style={{ marginBottom: 0 }}>
+            <div className="flow-track">
+              <div className="flow-fill" style={{ width: "100%", background: "var(--accent-green)" }} />
+            </div>
+          </div>
+          <div className="budget-row" style={{ marginBottom: 0 }}>
+            <div className="budget-top">
+              <span className="budget-name">Spent</span>
+              <span className="budget-amounts">{nairaCompact(cashFlow.totalSpent || 0)}</span>
+            </div>
+            <div className="flow-track">
+              <div
+                className="flow-fill"
+                style={{
+                  width: `${Math.min(
+                    100,
+                    Math.round(((cashFlow.totalSpent || 0) / (cashFlow.totalIncome || 1)) * 100)
+                  )}%`,
+                  background: "var(--accent-gold)",
+                }}
+              />
+            </div>
+          </div>
+        </SnapshotCard>
+      )}
+
+      {/* Snapshot 3: Top Spending (mini preview of the Budget tab) */}
+      {hasAccounts && topCategories.length > 0 && (
+        <SnapshotCard icon={PieIcon} title="Top Spending">
+          {topCategories.map(([category, amount]) => (
+            <div className="budget-row" key={category}>
               <div className="budget-top">
-                <span className="budget-name">Spent</span>
-                <span className="budget-amounts">{nairaCompact(cashFlow.totalSpent || 0)}</span>
+                <span className="budget-name">{category}</span>
+                <span className="budget-amounts">{nairaCompact(amount)}</span>
               </div>
               <div className="flow-track">
                 <div
                   className="flow-fill"
                   style={{
-                    width: `${Math.min(
-                      100,
-                      Math.round(
-                        ((cashFlow.totalSpent || 0) / (cashFlow.totalIncome || 1)) * 100
-                      )
-                    )}%`,
-                    background: "var(--accent-gold)",
+                    width: `${Math.round((amount / topCategories[0][1]) * 100)}%`,
+                    background: "var(--accent-green)",
                   }}
                 />
               </div>
             </div>
-          </div>
-        </>
+          ))}
+        </SnapshotCard>
       )}
 
+      {/* Snapshot 4: Accounts breakdown */}
       {hasAccounts && (
-        <>
-          <div className="section-title">Where it lives</div>
+        <SnapshotCard icon={Landmark} title="Accounts">
           <div className="breakdown-row">
             {data.accounts.map((a) => {
               const pct = Math.round((a.balanceNgn / data.totalNgn) * 100);
@@ -207,7 +242,7 @@ export default function Home() {
               );
             })}
           </div>
-        </>
+        </SnapshotCard>
       )}
     </div>
   );
