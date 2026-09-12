@@ -16,6 +16,7 @@ function ManualAccountForm({ onAdded, onClose }) {
   const [name, setName] = useState("");
   const [currency, setCurrency] = useState("NGN");
   const [balance, setBalance] = useState("");
+  const [costBasis, setCostBasis] = useState("");
   const [category, setCategory] = useState("investment");
   const [saving, setSaving] = useState(false);
 
@@ -24,7 +25,13 @@ function ManualAccountForm({ onAdded, onClose }) {
     if (!name || !balance) return;
     setSaving(true);
     try {
-      await api.addManualAccount({ name, currency, balance: Number(balance), category });
+      await api.addManualAccount({
+        name,
+        currency,
+        balance: Number(balance),
+        category,
+        costBasis: costBasis ? Number(costBasis) : null,
+      });
       onAdded();
       onClose();
     } finally {
@@ -48,10 +55,18 @@ function ManualAccountForm({ onAdded, onClose }) {
       </div>
       <input
         type="number"
-        placeholder="Balance"
+        placeholder="Current balance"
         value={balance}
         onChange={(e) => setBalance(e.target.value)}
       />
+      {category === "investment" && (
+        <input
+          type="number"
+          placeholder="Amount originally invested (optional)"
+          value={costBasis}
+          onChange={(e) => setCostBasis(e.target.value)}
+        />
+      )}
       <div className="sidebar-add-row">
         <button type="submit" disabled={saving}>{saving ? "Adding…" : "Add"}</button>
         <button type="button" className="ghost" onClick={onClose}>Cancel</button>
@@ -63,16 +78,24 @@ function ManualAccountForm({ onAdded, onClose }) {
 export default function AccountsSidebar({ refreshKey, onChanged }) {
   const [linked, setLinked] = useState([]);
   const [manual, setManual] = useState([]);
+  const [totalNgn, setTotalNgn] = useState(0);
   const [showAddMenu, setShowAddMenu] = useState(false);
   const [showManualForm, setShowManualForm] = useState(false);
 
   async function load() {
-    const [linkedRes, manualRes] = await Promise.all([
+    const [linkedRes, manualRes, netRes] = await Promise.all([
       api.getLinkedAccounts().catch(() => ({ accounts: [] })),
       api.getManualAccounts().catch(() => ({ accounts: [] })),
+      // Use the backend's already-correct total (it converts USD accounts
+      // and includes linked banks) rather than re-summing client-side —
+      // a client-side NGN-only sum here previously silently dropped both
+      // linked bank balances and USD accounts, showing a wrong total that
+      // didn't match the Dashboard/Net Worth pages.
+      api.getNetWorth("parallel").catch(() => ({ totalNgn: 0 })),
     ]);
     setLinked(linkedRes.accounts);
     setManual(manualRes.accounts);
+    setTotalNgn(netRes.totalNgn);
   }
 
   useEffect(() => {
@@ -97,7 +120,6 @@ export default function AccountsSidebar({ refreshKey, onChanged }) {
     })),
   ];
 
-  const totalNgn = manual.reduce((s, a) => s + (a.currency === "NGN" ? a.balance : 0), 0);
   const grouped = GROUP_ORDER.map((key) => ({
     key,
     label: GROUP_LABELS[key],

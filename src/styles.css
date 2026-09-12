@@ -55,10 +55,14 @@ body {
   border-right: 1px solid var(--hairline);
   display: flex;
   flex-direction: column;
-  align-items: center;
-  padding: 16px 0;
-  gap: 6px;
+  align-items: stretch;
+  padding: 16px 12px;
+  gap: 4px;
+  transition: width 0.15s ease;
+  overflow: hidden;
+  white-space: nowrap;
 }
+.icon-rail:hover { width: 190px; }
 .rail-brand {
   width: 36px;
   height: 36px;
@@ -71,9 +75,9 @@ body {
   font-weight: 800;
   font-size: 16px;
   margin-bottom: 14px;
+  flex-shrink: 0;
 }
 .rail-btn {
-  width: 40px;
   height: 40px;
   border-radius: 10px;
   border: none;
@@ -81,10 +85,20 @@ body {
   color: var(--text-secondary);
   display: flex;
   align-items: center;
-  justify-content: center;
+  gap: 12px;
+  padding: 0 10px;
   cursor: pointer;
+  width: 100%;
 }
 .rail-btn.active { background: var(--panel-alt); color: var(--accent-green); }
+.rail-icon { flex-shrink: 0; }
+.rail-label {
+  font-size: 13.5px;
+  font-weight: 500;
+  opacity: 0;
+  transition: opacity 0.1s ease;
+}
+.icon-rail:hover .rail-label { opacity: 1; }
 .rail-spacer { flex: 1; }
 
 .main-content {
@@ -527,3 +541,32 @@ body {
   .summary-cards { grid-template-columns: 1fr 1fr; }
   .accounts-sidebar { display: none; }
 }
+
+/* ---------------------------------------------------------------------- */
+/* Investments page: per-account cards, info note                          */
+/* ---------------------------------------------------------------------- */
+
+.invest-account-card {
+  padding: 14px 4px;
+  border-bottom: 1px solid var(--hairline);
+}
+.invest-account-card:last-child { border-bottom: none; }
+.invest-account-top { display: flex; align-items: center; gap: 8px; margin-bottom: 6px; }
+.invest-account-dot { width: 9px; height: 9px; border-radius: 999px; flex-shrink: 0; }
+.invest-account-name { font-size: 14.5px; font-weight: 600; color: var(--text-primary); }
+.invest-account-alloc { margin-left: auto; font-size: 12.5px; }
+.invest-account-bottom { display: flex; justify-content: space-between; align-items: center; padding-left: 17px; }
+.invest-account-balance { font-size: 15px; font-weight: 700; color: var(--text-primary); }
+.invest-account-gain { display: flex; align-items: center; gap: 4px; font-size: 13px; font-weight: 600; }
+
+.info-note {
+  display: flex;
+  gap: 10px;
+  align-items: flex-start;
+  background: var(--panel-alt);
+  border-radius: 12px;
+  padding: 14px 16px;
+  margin-top: 4px;
+  color: var(--text-secondary);
+}
+.info-note p { margin: 0; font-size: 13px; line-height: 1.6; }

@@ -37,16 +37,16 @@ export default function App() {
     <div className={`app-shell theme-${theme}`}>
       <div className="app-body">
         <nav className="icon-rail">
-          <div className="rail-brand">Q</div>
+          <div className="rail-brand">S</div>
           {NAV.map((n) => (
             <button
               key={n.id}
               className={`rail-btn ${view === n.id ? "active" : ""}`}
               onClick={() => setView(n.id)}
               aria-label={n.label}
-              title={n.label}
             >
-              <n.icon size={19} />
+              <n.icon size={19} className="rail-icon" />
+              <span className="rail-label">{n.label}</span>
             </button>
           ))}
           <div className="rail-spacer" />
@@ -54,17 +54,17 @@ export default function App() {
             className="rail-btn"
             onClick={() => setTheme((t) => (t === "light" ? "dark" : "light"))}
             aria-label="Toggle theme"
-            title="Toggle light/dark"
           >
-            {theme === "light" ? <Moon size={18} /> : <Sun size={18} />}
+            {theme === "light" ? <Moon size={18} className="rail-icon" /> : <Sun size={18} className="rail-icon" />}
+            <span className="rail-label">{theme === "light" ? "Dark mode" : "Light mode"}</span>
           </button>
           <button
             className="rail-btn"
             onClick={() => setRefreshSignal((s) => s + 1)}
             aria-label="Refresh"
-            title="Refresh"
           >
-            <RefreshCw size={18} />
+            <RefreshCw size={18} className="rail-icon" />
+            <span className="rail-label">Refresh</span>
           </button>
         </nav>
 

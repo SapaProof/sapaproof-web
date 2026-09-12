@@ -1,14 +1,14 @@
 # SapaProof — web app
 
-Real frontend, wired to the `sapaproof-backend` service — no more mock data.
+Real frontend, wired to the `sapaproof-backend` service.
 
 ## Run it
 
-**1. Start the backend first** (see `sapaproof-backend/README.md` if you haven't already):
+**1. Start the backend first** (see `sapaproof-backend/README.md`):
 ```
 cd sapaproof-backend
 npm install
-cp .env.example .env   # add your Mono keys
+cp .env.example .env   # add your Mono keys (test_sk_/test_pk_ while KYB is pending)
 npm run dev             # runs on :4000
 ```
 
@@ -16,21 +16,37 @@ npm run dev             # runs on :4000
 ```
 cd sapaproof-web
 npm install
-cp .env.example .env    # set VITE_MONO_PUBLIC_KEY (the public one, not secret)
+cp .env.example .env    # set VITE_API_BASE_URL and VITE_MONO_PUBLIC_KEY
 npm run dev              # runs on :3000
 ```
 
-Open http://localhost:3000. You'll land on an empty state — that's correct for a fresh user. Click **Connect a bank account** to run the real Mono widget in sandbox mode, or add a manual account (Bamboo, RiseVest, etc.) to see the net-worth math work.
+Open http://localhost:3000. You'll land on an empty Dashboard — click **Load demo data** to see everything populated with realistic Nigerian numbers (GTBank, Zenith, Access, Bamboo, RiseVest, Cowrywise, PiggyVest, Kuda), or **Connect a bank account** to try the real Mono sandbox widget.
 
-## What's real vs. what's still a placeholder
+## Layout
 
-- **Real**: bank linking via Mono, live balance fetch, USD→NGN conversion, transaction categorization (rules + Claude fallback), budget rollup by category.
-- **Placeholder**: `getUserId()` in `src/api.js` fakes a logged-in user with a random ID stored in the browser. There's no login screen and no real auth check on the backend yet (see `requireUser` in the backend routes) — anyone who knows a user's ID could currently hit their endpoints. Fine for building solo against your own test accounts; not fine to deploy publicly as-is.
-- **Not built yet**: net worth *history* (the sparkline from the earlier mockup) — `/api/finance/networth` only returns a current snapshot. To chart it over time you'd need to snapshot net worth to storage on some schedule (e.g. a daily cron job) and add an endpoint to read that history back.
+Icon rail on the far left switches between seven views: **Dashboard**, **Transactions**, **Spending**, **Net Worth**, **Spending Plan**, **Investments**, **Savings Goals**. The **Accounts sidebar** next to it is always visible regardless of which view is active — click the "+" there to connect a bank or add a manual account.
+
+## What's real vs. what's illustrative vs. what's a placeholder
+
+**Real, computed from actual data:**
+- Bank linking via Mono (sandbox mode; live mode needs KYB approval)
+- Net worth math, USD→NGN conversion (official and parallel rate)
+- Transaction categorization (keyword rules + Claude fallback for anything ambiguous)
+- Investment gain/loss, once you enter what you originally invested (real subtraction, not simulated market data)
+- Savings Goals — create, track, and update; a genuinely working feature, not a mockup
+
+**Illustrative (clearly synthetic, ends at a real current total, but not real tracked history):**
+- Net worth trend chart, and the Income/Spending 6-month bar charts. Real historical tracking needs a scheduled snapshot job writing to a database — not built yet (see below).
+- "Planned" budget figures in Spending Plan / Top Spending — placeholder targets since there's no budget-setting UI yet.
+
+**Known gaps, not hidden — stated outright in the Investments page too:**
+- No per-holding stock data (shares, price, day change) — Bamboo/RiseVest/Cowrywise are pooled-fund platforms, not brokerages, and don't expose that.
+- `getUserId()` in `src/api.js` fakes a logged-in user with a random browser-stored ID. No real login, no real auth check on the backend (`requireUser` just checks a header is present). Fine solo; not fine to open to real users as-is.
 
 ## Natural next steps, roughly in order of what unblocks the most
 
-1. **Real auth** — swap the `x-user-id` header stand-in for actual sessions/JWT before anyone but you touches this.
-2. **Persistent database** — `store.js` in the backend is in-memory; move it to Postgres.
-3. **Net worth history** — daily snapshot job + a history endpoint, to bring back the trend chart.
-4. **Mobile** — once this is solid, port the screens to React Native. The backend doesn't change at all; only the frontend gets rebuilt with native components instead of DOM elements.
+1. **Real auth** — swap the `x-user-id` stand-in for actual sessions/JWT.
+2. **Persistent database** — `store.js` in the backend is in-memory and resets on every restart/redeploy. Move to Postgres.
+3. **Real net worth/cash-flow history** — a daily snapshot job once there's a database to snapshot into.
+4. **Budget-setting UI** — replace the hardcoded `PLANNED` figures in `routes/finance.js` with something the user actually sets.
+5. **Mobile** — port screens to React Native once the web version is solid; the backend doesn't change at all.
